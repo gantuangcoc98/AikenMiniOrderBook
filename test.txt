@@ -1,0 +1,115 @@
+cardano-cli query tip \
+--socket-path $(cat preview.socket) \
+--testnet-magic 2
+
+cardano-cli address key-gen \
+--verification-key-file namiv2.vkey \
+--signing-key-file namiv2.skey
+
+cardano-cli address build \
+--payment-verification-key-file payment1.vkey \
+--out-file payment1.addr \
+--testnet-magic 2
+
+# UTXO from user
+cardano-cli query utxo \
+--address $(cat user.addr) \
+--socket-path $(cat preview.socket) \
+--testnet-magic 2
+
+# Lock asset to Smart Contract
+cardano-cli latest transaction build \
+--tx-in 389047b7a08ed8d07f781f7fbc1ac688725b222bc9cf453815fe6ee8e70836e3#1 \
+--tx-out $(cat alwaysTrue.addr)+5000000 \
+--tx-out-inline-datum-file ./datum.json \
+--socket-path $(cat preview.socket) \
+--testnet-magic 2 \
+--change-address $(cat user.addr) \
+--out-file tx.raw
+
+
+# UTXO from Smart Contract Address
+cardano-cli query utxo \
+--address $(cat keys/alwaysTrueSC.addr) \
+--socket-path /tmp/node.socket \
+--testnet-magic 2
+
+cardano-cli transaction policyid --script-file policy.json
+
+# Send NFTs to other wallet
+cardano-cli transaction build \
+--tx-in e7662df1dfb35143e51c7767b99cdaa146e052d72060a0f6b34ec7ab19c3f497#0 \
+--tx-in bc244727531d0702189b304fa89c4ecde5ac69c12f757d375298962b7d9ac8c8#1 \
+--tx-out $(cat keys/alwaysTrueSC.addr)+1043020+"5000 da5a3e03f768a32b13a64d0733af2db8a1d44052a10540d8e6393607.5465737465727a7a" \
+--socket-path /tmp/node.socket \
+--testnet-magic 2 \
+--change-address $(cat keys/payment1.addr) \
+--out-file tx.raw
+
+# Mint transaction
+
+# Reference NFT
+cardano-cli transaction build \
+--tx-in af034047ea595640ff9f7423ade02e609141eb1c778cd6691dc129bfb8ce5c26#1 \
+--tx-out $(cat keys/alwaysTrueSC.addr)+1211110+"5000 05cff24a6b9253bc9bdb2050d83af9a4fabbd46d41e926776b0d5eb1.54455354455253" \
+--mint "5000 05cff24a6b9253bc9bdb2050d83af9a4fabbd46d41e926776b0d5eb1.54455354455253" \
+--minting-script-file policy.json \
+--metadata-json-file metadata.json \
+--socket-path /tmp/node.socket \
+--testnet-magic 2 \
+--change-address $(cat keys/payment1.addr) \
+--out-file tx.raw
+
+# User Token
+cardano-cli transaction build \
+--tx-in a5736ee50057dc683c6a953c8fd7729c64d0e3bfa21334da230ac273672270e7#0 \
+--tx-out addr_test1qpcrtwh5fjrmjqw8t3ah8h4ylm5n022qq8j06w9paqxgpeznsu0h7xtnxqyvgdkyk892fuaf9nggf2dgq7c2gktah02s42dfv3+1180940+"1 05cff24a6b9253bc9bdb2050d83af9a4fabbd46d41e926776b0d5eb1.4E616D69546573744D696E745632" \
+--mint "1 05cff24a6b9253bc9bdb2050d83af9a4fabbd46d41e926776b0d5eb1.4E616D69546573744D696E745632" \
+--minting-script-file policy.json \
+--metadata-json-file metadata.json \
+--socket-path /tmp/node.socket \
+--testnet-magic 2 \
+--change-address $(cat keys/nami/namiv2.addr) \
+--out-file tx.raw
+
+# Transaction Build to Smart Contract
+cardano-cli transaction build \
+--tx-in 3711aa6f59c39924fd7a3e4df7abf99130f91889c662a2800c3934ca128f55c2#1 \
+--tx-in 42c89397d77629e4623d8c22bac3701a88204ac4d72a8312b731f9e4958507d6#0 \
+--tx-out $(cat keys/alwaysTrueSC.addr)+1521430+"100 da5a3e03f768a32b13a64d0733af2db8a1d44052a10540d8e6393607.5465737465727a7a" \
+--tx-out-inline-datum-file ./datum.json \
+--socket-path /tmp/node.socket \
+--testnet-magic 2 \
+--change-address $(cat keys/payment1.addr) \
+--out-file tx.raw
+
+# Unlock Smart Contract
+cardano-cli transaction build \
+--tx-in 4a6344e1718311c84233d30d748517f8ab4d15afcda9a1234605cc0ca485f057#1 \
+--tx-in e7a78fdb892a3ba20abb67333bdf651ee26e22cf7617286d3b7d41b5403c9eb5#0 \
+--tx-out $(cat keys/alwaysTrueSC.addr)+1043020+"100 da5a3e03f768a32b13a64d0733af2db8a1d44052a10540d8e6393607.5465737465727a7a" \
+--tx-in-collateral aa8fb093e7318cb2f83b82ba88be74d2945107eeea83f294bcfc2971fe8603ad#0 \
+--spending-tx-in-reference 5133eec5116ded462d2888409b71a3d3c9abfd136d9fc61c392793ff5d3fffd6#0 \
+--spending-plutus-script-v2 \
+--spending-reference-tx-in-inline-datum-present \
+--spending-reference-tx-in-redeemer-file redeemer.json \
+--change-address $(cat keys/alwaysTrueSC.addr) \
+--testnet-magic 2 \
+--socket-path /tmp/node.socket \
+--out-file tx.raw
+
+cardano-address address payment \
+--network-tag mainnet < keys/spectrumScript.hash > keys/spectrumSC.addr
+
+# Sign transaction
+cardano-cli latest transaction sign \
+--signing-key-file keys/user.skey \
+--tx-body-file tx.raw \
+--testnet-magic 2 \
+--out-file tx.signed
+
+# Submit transaction
+cardano-cli latest transaction submit \
+--socket-path $(cat preview.socket) \
+--testnet-magic 2 \
+--tx-file tx.signed

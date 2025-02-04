@@ -1,32 +1,64 @@
-use cardano/address.{Credential}
-use cardano/assets.{PolicyId}
-use cardano/certificate.{Certificate}
-use cardano/governance.{ProposalProcedure, Voter}
-use cardano/transaction.{Transaction, OutputReference}
+use aiken/collection/list
+use aiken/crypto.{VerificationKeyHash}
+use cardano/address.{Address, VerificationKey}
+use cardano/assets.{AssetName, PolicyId, Value}
+use cardano/transaction.{OutputReference, Transaction}
+
+pub type OrderRedeemer {
+  Accept
+  Cancel
+}
+
+pub type OrderDatum {
+  owner: VerificationKeyHash,
+  asset: (PolicyId, AssetName),
+  quantity: Int,
+}
 
 validator placeholder {
-  mint(_redeemer: Data, _policy_id: PolicyId, _self: Transaction) {
-    todo @"mint logic goes here"
+  spend(
+    datum: Option<OrderDatum>,
+    redeemer: OrderRedeemer,
+    _utxo: OutputReference,
+    self: Transaction,
+  ) {
+    let Transaction { outputs, extra_signatories, .. } = self
+
+    when redeemer is {
+      Accept ->
+        list.for_each(
+          outputs,
+          do: fn(output) {
+            let Address { payment_credential, .. } = output.address
+
+            when payment_credential is {
+              VerificationKey(verification_key_hash) -> {
+                expect Some(datum) = datum
+                if datum.owner == verification_key_hash {
+                  let (policy_id, asset_name) = datum.asset
+                  let quantity =
+                    output.value.quantity_of(
+                      policy_id: policy_id,
+                      asset_name: asset_name,
+                    )
+                  quantity >= datum.quantity
+                } else {
+                  False
+                }
+              }
+            }
+          },
+        )
+
+      Cancel -> {
+        expect Some(datum) = datum
+        list.has(extra_signatories, datum.owner)
+      }
+    }
   }
 
-  spend(_datum: Option<Data>, _redeemer: Data, _utxo: OutputReference, _self: Transaction) {
-    todo @"spend logic goes here"
-  }
-
-  withdraw(_redeemer: Data, _account: Credential, _self: Transaction) {
-    todo @"withdraw logic goes here"
-  }
-
-  publish(_redeemer: Data, _certificate: Certificate, _self: Transaction) {
-    todo @"publish logic goes here"
-  }
-
-  vote(_redeemer: Data, _voter: Voter, _self: Transaction) {
-    todo @"vote logic goes here"
-  }
-
-  propose(_redeemer: Data, _proposal: ProposalProcedure, _self: Transaction) {
-    todo @"propose logic goes here"
+  else(_) {
+    fail
   }
 
   // // If needs be, remove any of unneeded handlers above, and use:
