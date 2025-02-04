@@ -19,14 +19,13 @@ cardano-cli query utxo \
 
 # Lock asset to Smart Contract
 cardano-cli latest transaction build \
---tx-in 389047b7a08ed8d07f781f7fbc1ac688725b222bc9cf453815fe6ee8e70836e3#1 \
---tx-out $(cat alwaysTrue.addr)+5000000 \
---tx-out-inline-datum-file ./datum.json \
+--tx-in b19b7b18e1dbbdd487c336d4665318c68e943d43e9618d9c4978f4091617406e#1 \
+--tx-out $(cat order-book.addr)+8000000 \
+--tx-out-inline-datum-file datum.json \
 --socket-path $(cat preview.socket) \
 --testnet-magic 2 \
 --change-address $(cat user.addr) \
 --out-file tx.raw
-
 
 # UTXO from Smart Contract Address
 cardano-cli query utxo \
@@ -84,18 +83,19 @@ cardano-cli transaction build \
 --out-file tx.raw
 
 # Unlock Smart Contract
-cardano-cli transaction build \
---tx-in 4a6344e1718311c84233d30d748517f8ab4d15afcda9a1234605cc0ca485f057#1 \
---tx-in e7a78fdb892a3ba20abb67333bdf651ee26e22cf7617286d3b7d41b5403c9eb5#0 \
---tx-out $(cat keys/alwaysTrueSC.addr)+1043020+"100 da5a3e03f768a32b13a64d0733af2db8a1d44052a10540d8e6393607.5465737465727a7a" \
---tx-in-collateral aa8fb093e7318cb2f83b82ba88be74d2945107eeea83f294bcfc2971fe8603ad#0 \
---spending-tx-in-reference 5133eec5116ded462d2888409b71a3d3c9abfd136d9fc61c392793ff5d3fffd6#0 \
---spending-plutus-script-v2 \
---spending-reference-tx-in-inline-datum-present \
---spending-reference-tx-in-redeemer-file redeemer.json \
---change-address $(cat keys/alwaysTrueSC.addr) \
+cardano-cli latest transaction build \
+--socket-path $(cat preview.socket) \
 --testnet-magic 2 \
---socket-path /tmp/node.socket \
+--tx-in ca20c17ea2a923152d5e32532b5848947f37e6f411515fd5fc950b3a64260076#0 \
+--spending-tx-in-reference 7364b2ed6a162fd1e2f6674ae178fd390f6bab86eb9af1ba0a2f734461117280#0 \
+--spending-plutus-script-v3 \
+--spending-reference-tx-in-inline-datum-present \
+--spending-reference-tx-in-redeemer-file acceptRedeemer.json \
+--required-signer-hash c05cb5c5f43aac9d9e057286e094f60d09ae61e8962ad5c42196180c \
+--tx-in-collateral 4168702f8f8b2b7b70d1525965b6f04464dd348e8863f02731050fe60f41fd27#1 \
+--tx-in ca20c17ea2a923152d5e32532b5848947f37e6f411515fd5fc950b3a64260076#1 \
+--tx-out addr_test1vrq9edw97sa2e8v7q4egdcy57cxsntnpaztz44wyyxtpsrqv5teg7+10000000 \
+--change-address $(cat user.addr) \
 --out-file tx.raw
 
 cardano-address address payment \
@@ -113,3 +113,12 @@ cardano-cli latest transaction submit \
 --socket-path $(cat preview.socket) \
 --testnet-magic 2 \
 --tx-file tx.signed
+
+# Reference Script transaction
+cardano-cli latest transaction build --testnet-magic 2 \
+--tx-in 634835ad5bf1a9618b85da924fbea60d7b45d4e33fc5bf18f7adba41d00399f4#1 \
+--tx-out $(cat order-book.addr)+5000000 \
+--tx-out-reference-script-file order-book.plutus \
+--change-address $(cat user.addr) \
+--socket-path $(cat preview.socket) \
+--out-file ./tx.raw
